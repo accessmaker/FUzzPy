@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env python
 # -*- utf-8 -*-
 
 import argparse
@@ -29,7 +29,7 @@ class Fuzzer:
     # TODO Método que trata e imprime o banner
     def banner(self, list):
         banner = rb.random_banner()
-        print(self.OK+banner+self.RESET)
+        print(banner)
         time.sleep(2)
         print('-'*50)
         print('Autor: Lucas dSilva')
@@ -140,9 +140,9 @@ class Fuzzer:
 
     def fuzz_extension_on_target(self, wordlist):
         try:
-            resultado = Parallel(n_jobs=50)(
+            resultado = Parallel(n_jobs=35)(
                 delayed(self.work_ext)(word) for word in wordlist)
-            resultado2 = Parallel(n_jobs=50)(
+            resultado2 = Parallel(n_jobs=35)(
                 delayed(self.work)(word)for word in wordlist)
         except KeyboardInterrupt:
             print("\nParando a execução")
