@@ -5,16 +5,20 @@ import argparse
 import requests
 from joblib import Parallel, delayed
 import time
+import urllib3
 from banners import rBanner as rb
+
 
 class Fuzzer:
     # TODO Método inicial da classe
     def __init__(self, args):
+        global lista
         self.args = args
         self.tempo_inicial = time.time()
         self.OK = '\033[92m'  # GREEN
         self.RESET = '\033[0m'  # RESET COLOR
         self.WARNING = '\033[93m'  # YELLOW
+        self.s = requests.Session()
     # TODO Método que executa toda a lógica da classe
 
     def run(self):
@@ -55,23 +59,41 @@ class Fuzzer:
         print(f"Número de linhas: {wc}")
         print("-"*50)
 
+    # TODO Método que vrifica se o parâmetro (-o) está ativo e usa o caminho para criar o arquivo de saída e as salva nele
+    def save_in_output(self, founds):
+        if self.args.output:
+            with open(args.output, 'w+') as file:
+                for i in founds:
+                    if i == None:
+                        pass
+                    else:
+                        file.write(i)
+                        file.write('\n')
+
     # TODO Método que monta e realiza as requisições sem as extensões ao alvo
 
     def work(self, word):
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         url_final = f'{args.target}{word}'
         if args.simple == 's':
             try:
-                r = requests.get(url_final, stream=True,
-                                 verify=False, timeout=10)
+                r = self.s.get(url_final, stream=True,
+                               verify=False, timeout=10)
                 if r.status_code <= 403:
-                    print(f"{url_final}")
+                    if r.status_code > 200:
+                        print(
+                            f"{self.WARNING}<{r.status_code}>= {url_final}{self.RESET}")
+                    else:
+                        print(
+                            f"{self.OK}<{r.status_code}>= {url_final}{self.RESET}")
+                    return url_final
             except:
                 pass
 
         else:
             try:
-                r = requests.get(url_final, stream=True,
-                                 verify=False, timeout=10)
+                r = self.s.get(url_final, stream=True,
+                               verify=False, timeout=10)
                 if r.status_code <= 403:
                     if r.status_code == 200:
                         print(
@@ -79,24 +101,31 @@ class Fuzzer:
                     else:
                         print(
                             f"{self.OK}Found:{self.RESET} {url_final} CODE:{self.WARNING}<{r.status_code}>{self.RESET}")
+                    return url_final
             except:
                 pass
-
     # TODO Método que monta e realiza as requisições com as extensões ao alvo
 
     def work_ext(self, word):
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         extensoes = args.extensions
         extensoes = extensoes.split(',')
         if args.simple == 's':
             for ext in extensoes:
                 if '.' not in ext:
-                    extp = '.'+ext
+                    ext = '.'+ext
                 url_final = f'{args.target}{word}{ext}'
                 try:
-                    r = requests.get(url_final, stream=True,
-                                     verify=False, timeout=10)
+                    r = self.s.get(url_final, stream=True,
+                                   verify=False, timeout=10)
                     if r.status_code <= 403:
-                        print(f"{url_final}")
+                        if r.status_code > 200:
+                            print(
+                                f"{self.WARNING}<{r.status_code}>= {url_final}{self.RESET}")
+                        else:
+                            print(
+                                f"{self.OK}<{r.status_code}>= {url_final}{self.RESET}")
+                    return url_final
                 except:
                     pass
         else:
@@ -105,8 +134,8 @@ class Fuzzer:
                     ext = '.'+ext
                 url_final = f'{args.target}{word}{ext}'
                 try:
-                    r = requests.get(url_final, stream=True,
-                                     verify=False, timeout=10)
+                    r = self.s.get(url_final, stream=True,
+                                   verify=False, timeout=10)
                     if r.status_code <= 403:
                         if r.status_code == 200:
                             print(
@@ -114,6 +143,7 @@ class Fuzzer:
                         else:
                             print(
                                 f"{self.OK}Found:{self.RESET} {url_final} CODE:{self.WARNING}<{r.status_code}>{self.RESET}")
+                    return url_final
                 except:
                     pass
 
@@ -123,9 +153,10 @@ class Fuzzer:
         try:
             resultado = Parallel(n_jobs=35)(
                 delayed(self.work)(word)for word in wordlist)
+            self.save_in_output(resultado)
         except KeyboardInterrupt:
             print("\nParando a execução")
-        else:
+        finally:
             tempo_final = time.time()
             tempo_exec = tempo_final-self.tempo_inicial
             if tempo_exec >= 60:
@@ -142,11 +173,13 @@ class Fuzzer:
         try:
             resultado = Parallel(n_jobs=35)(
                 delayed(self.work_ext)(word) for word in wordlist)
+            self.save_in_output(resultado)
             resultado2 = Parallel(n_jobs=35)(
                 delayed(self.work)(word)for word in wordlist)
+            self.save_in_output(resultado2)
         except KeyboardInterrupt:
             print("\nParando a execução")
-        else:
+        finally:
             tempo_final = time.time()
             tempo_exec = tempo_final-self.tempo_inicial
             if tempo_exec >= 60:
@@ -164,7 +197,7 @@ class Fuzzer:
                 lista = file.read()
             lista = lista.split('\n')
         else:
-            with open('res/standart-wordlist.txt', 'r')as file:  # res/standart-wordlist.txt
+            with open('res/standart-wordlist.txt', 'r')as file:
                 lista = file.read()
                 lista = lista.strip()
             lista = lista.split('\n')
@@ -173,7 +206,6 @@ class Fuzzer:
 
 # TODO tratamento dos argumentos
 if __name__ == '__main__':
-    # target,extensions,wordlist,Talvez(output),banner,simplemode
     parser = argparse.ArgumentParser(
         description="FuzzPY\n by:Lucas dSilva")
     parser.add_argument('-t', '--target', type=str, help='A url do alvo')
@@ -185,6 +217,9 @@ if __name__ == '__main__':
                         type=str, help='Ativa ou desativa o simple mode s=para ativar\n n=desativa(Padrão)')
     parser.add_argument('-b', '--banner', default='s', type=str,
                         help="Ativa o desativa o cabeçalho do programa:\n s=Para ativar(Padrão)\nn=para desativar")
+    parser.add_argument('-o', '--output', type=str,
+                        help='Ative para guardar a saida do programa em um arquivo')
+
     args = parser.parse_args()
 
     fp = Fuzzer(args)
