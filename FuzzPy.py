@@ -3,7 +3,7 @@
 
 import argparse
 import requests
-from joblib import Parallel, delayed
+from multiprocessing import Pool as tp
 import time
 import urllib3
 from banners import rBanner as rb
@@ -151,8 +151,8 @@ class Fuzzer:
 
     def fuzz_target(self, wordlist):
         try:
-            resultado = Parallel(n_jobs=35)(
-                delayed(self.work)(word)for word in wordlist)
+            pool = tp(40)
+            resultado = pool.map(self.work,wordlist)
             self.save_in_output(resultado)
         except KeyboardInterrupt:
             print("\nParando a execução")
@@ -171,11 +171,10 @@ class Fuzzer:
 
     def fuzz_extension_on_target(self, wordlist):
         try:
-            resultado = Parallel(n_jobs=35)(
-                delayed(self.work_ext)(word) for word in wordlist)
+            pool = tp(40)
+            resultado = pool.map(self.work_ext,wordlist)
             self.save_in_output(resultado)
-            resultado2 = Parallel(n_jobs=35)(
-                delayed(self.work)(word)for word in wordlist)
+            resultado2 = pool.map(self.work,wordlist)
             self.save_in_output(resultado2)
         except KeyboardInterrupt:
             print("\nParando a execução")
@@ -197,7 +196,7 @@ class Fuzzer:
                 lista = file.read()
             lista = lista.split('\n')
         else:
-            with open('res/standart-wordlist.txt', 'r')as file:
+            with open('res/standart-wordlist.txt', 'r')as file:  # res/standart-wordlist.txt
                 lista = file.read()
                 lista = lista.strip()
             lista = lista.split('\n')
