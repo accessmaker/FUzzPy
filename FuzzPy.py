@@ -58,6 +58,8 @@ class Fuzzer:
         wc = len(list)
         print(f"Número de linhas: {wc}")
         print("-"*50)
+        print(f"Threads: {args.threads}")
+        print("-"*50)
 
     # TODO Método que vrifica se o parâmetro (-o) está ativo e usa o caminho para criar o arquivo de saída e as salva nele
     def save_in_output(self, founds):
@@ -69,6 +71,26 @@ class Fuzzer:
                     else:
                         file.write(i)
                         file.write('\n')
+
+    def save_line(self, lista1, lista2):
+        lista_final = []
+        for i in lista1:
+            if i == None:
+                continue
+            else:
+                if type(i) == list:
+                    for w in i:
+                        lista_final.append(w)
+                else:
+                    lista_final.append(i)
+        for i2 in lista2:
+            if i2 == None:
+                continue
+
+            else:
+                lista_final.append(i2)
+
+        return lista_final
 
     # TODO Método que monta e realiza as requisições sem as extensões ao alvo
 
@@ -110,49 +132,85 @@ class Fuzzer:
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         extensoes = args.extensions
         extensoes = extensoes.split(',')
+        listResponse = []
         if args.simple == 's':
             for ext in extensoes:
                 if '.' not in ext:
                     ext = '.'+ext
-                url_final = f'{args.target}{word}{ext}'
-                try:
-                    r = self.s.get(url_final, stream=True,
-                                   verify=False, timeout=10)
-                    if r.status_code <= 403:
-                        if r.status_code > 200:
-                            print(
-                                f"{self.WARNING}<{r.status_code}>= {url_final}{self.RESET}")
-                        else:
-                            print(
-                                f"{self.OK}<{r.status_code}>= {url_final}{self.RESET}")
-                    return url_final
-                except:
-                    pass
+                    url_final = f'{args.target}{word}{ext}'
+                    try:
+                        r = self.s.get(url_final, stream=True,
+                                       verify=False, timeout=10)
+                        if r.status_code <= 403:
+                            if r.status_code > 200:
+                                print(
+                                    f"{self.WARNING}<{r.status_code}>= {url_final}{self.RESET}")
+                            else:
+                                print(
+                                    f"{self.OK}<{r.status_code}>= {url_final}{self.RESET}")
+                            listResponse.append(url_final)
+                        continue
+                    except:
+                        pass
+                else:
+                    url_final = f'{args.target}{word}{ext}'
+                    try:
+                        r = self.s.get(url_final, stream=True,
+                                       verify=False, timeout=10)
+                        if r.status_code <= 403:
+                            if r.status_code > 200:
+                                print(
+                                    f"{self.WARNING}<{r.status_code}>= {url_final}{self.RESET}")
+                            else:
+                                print(
+                                    f"{self.OK}<{r.status_code}>= {url_final}{self.RESET}")
+                            listResponse.append(url_final)
+                        continue
+                    except:
+                        pass
         else:
             for ext in extensoes:
                 if '.' not in ext:
                     ext = '.'+ext
-                url_final = f'{args.target}{word}{ext}'
-                try:
-                    r = self.s.get(url_final, stream=True,
-                                   verify=False, timeout=10)
-                    if r.status_code <= 403:
-                        if r.status_code == 200:
-                            print(
-                                f"{self.OK}Found:{self.RESET} {url_final} CODE:{self.OK}<{r.status_code}>{self.RESET}")
-                        else:
-                            print(
-                                f"{self.OK}Found:{self.RESET} {url_final} CODE:{self.WARNING}<{r.status_code}>{self.RESET}")
-                    return url_final
-                except:
-                    pass
+                    url_final = f'{args.target}{word}{ext}'
+                    try:
+                        r = self.s.get(url_final, stream=True,
+                                       verify=False, timeout=10)
+                        if r.status_code <= 403:
+                            if r.status_code == 200:
+                                print(
+                                    f"{self.OK}Found:{self.RESET} {url_final} CODE:{self.OK}<{r.status_code}>{self.RESET}")
+                            else:
+                                print(
+                                    f"{self.OK}Found:{self.RESET} {url_final} CODE:{self.WARNING}<{r.status_code}>{self.RESET}")
+                            self.save_in_output(url_final)
+                        continue
+                    except:
+                        pass
+                else:
+                    url_final = f'{args.target}{word}{ext}'
+                    try:
+                        r = self.s.get(url_final, stream=True,
+                                       verify=False, timeout=10)
+                        if r.status_code <= 403:
+                            if r.status_code == 200:
+                                print(
+                                    f"{self.OK}Found:{self.RESET} {url_final} CODE:{self.OK}<{r.status_code}>{self.RESET}")
+                            else:
+                                print(
+                                    f"{self.OK}Found:{self.RESET} {url_final} CODE:{self.WARNING}<{r.status_code}>{self.RESET}")
+                            self.save_in_output(url_final)
+                        continue
+                    except:
+                        pass
+        return listResponse
 
     # TODO Método que faz o fuzzing sem extensões
 
     def fuzz_target(self, wordlist):
         try:
-            pool = tp(40)
-            resultado = pool.map(self.work,wordlist)
+            pool = tp(args.threads)
+            resultado = pool.map(self.work, wordlist)
             self.save_in_output(resultado)
         except KeyboardInterrupt:
             print("\nParando a execução")
@@ -171,11 +229,11 @@ class Fuzzer:
 
     def fuzz_extension_on_target(self, wordlist):
         try:
-            pool = tp(40)
-            resultado = pool.map(self.work_ext,wordlist)
-            self.save_in_output(resultado)
-            resultado2 = pool.map(self.work,wordlist)
-            self.save_in_output(resultado2)
+            pool = tp(args.threads)
+            resultado = pool.map(self.work_ext, wordlist)
+            resultado2 = pool.map(self.work, wordlist)
+            save_list = self.save_line(resultado, resultado2)
+            self.save_in_output(save_list)
         except KeyboardInterrupt:
             print("\nParando a execução")
         finally:
@@ -218,6 +276,8 @@ if __name__ == '__main__':
                         help="Ativa o desativa o cabeçalho do programa:\n s=Para ativar(Padrão)\nn=para desativar")
     parser.add_argument('-o', '--output', type=str,
                         help='Ative para guardar a saida do programa em um arquivo')
+    parser.add_argument('-th', '--threads', type=int, default=40,
+                        help='Coloque o número de threads que deseja')
 
     args = parser.parse_args()
 
