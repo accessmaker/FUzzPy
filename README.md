@@ -62,3 +62,6 @@ optional arguments:
                         Coloque o número d threads
                         que deseja.
                         
+<h2>FUNCTIONALITY</h2>
+
+'Funcionalidade': Ele usa a biblioteca requests para tentar listar os diretórios ou arquivos de uma aplicação web por meio de uma wordlist.
