@@ -7,6 +7,7 @@ from multiprocessing import Pool as tp
 import time
 import urllib3
 from banners import rBanner as rb
+from tqdm import tqdm
 
 
 class Fuzzer:
@@ -62,36 +63,16 @@ class Fuzzer:
         print("-"*50)
 
     # TODO Método que vrifica se o parâmetro (-o) está ativo e usa o caminho para criar o arquivo de saída e as salva nele
-    def save_in_output(self, founds):
+    def save_in_output(self, found):
         if self.args.output:
             with open(args.output, 'w+') as file:
-                for i in founds:
-                    if i == None:
-                        pass
-                    else:
-                        file.write(i)
-                        file.write('\n')
-
-    def save_line(self, lista1, lista2):
-        lista_final = []
-        for i in lista1:
-            if i == None:
-                continue
-            else:
-                if type(i) == list:
-                    for w in i:
-                        lista_final.append(w)
+                if found == None:
+                    pass
                 else:
-                    lista_final.append(i)
-        for i2 in lista2:
-            if i2 == None:
-                continue
+                    file.write(found)
+                    file.write('\n')
 
-            else:
-                lista_final.append(i2)
-
-        return lista_final
-
+    
     # TODO Método que monta e realiza as requisições sem as extensões ao alvo
 
     def work(self, word):
@@ -101,14 +82,8 @@ class Fuzzer:
             try:
                 r = self.s.get(url_final, stream=True,
                                verify=False, timeout=10)
-                if r.status_code <= 403:
-                    if r.status_code > 200:
-                        print(
-                            f"{self.WARNING}<{r.status_code}>= {url_final}{self.RESET}")
-                    else:
-                        print(
-                            f"{self.OK}<{r.status_code}>= {url_final}{self.RESET}")
-                    return url_final
+                if r.status_code < 400:
+                    return f"{self.OK}{url_final}{self.RESET}"
             except:
                 pass
 
@@ -116,14 +91,8 @@ class Fuzzer:
             try:
                 r = self.s.get(url_final, stream=True,
                                verify=False, timeout=10)
-                if r.status_code <= 403:
-                    if r.status_code == 200:
-                        print(
-                            f"{self.OK}Found:{self.RESET} {url_final} CODE:{self.OK}<{r.status_code}>{self.RESET}")
-                    else:
-                        print(
-                            f"{self.OK}Found:{self.RESET} {url_final} CODE:{self.WARNING}<{r.status_code}>{self.RESET}")
-                    return url_final
+                if r.status_code < 400:
+                    return f"{self.OK}Found[*]:{self.RESET} {url_final}{self.RESET}"
             except:
                 pass
     # TODO Método que monta e realiza as requisições com as extensões ao alvo
@@ -132,7 +101,6 @@ class Fuzzer:
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         extensoes = args.extensions
         extensoes = extensoes.split(',')
-        listResponse = []
         if args.simple == 's':
             for ext in extensoes:
                 if '.' not in ext:
@@ -141,14 +109,8 @@ class Fuzzer:
                     try:
                         r = self.s.get(url_final, stream=True,
                                        verify=False, timeout=10)
-                        if r.status_code <= 403:
-                            if r.status_code > 200:
-                                print(
-                                    f"{self.WARNING}<{r.status_code}>= {url_final}{self.RESET}")
-                            else:
-                                print(
-                                    f"{self.OK}<{r.status_code}>= {url_final}{self.RESET}")
-                            listResponse.append(url_final)
+                        if r.status_code < 400:
+                            return f"{self.OK}{url_final}{self.RESET}"
                         continue
                     except:
                         pass
@@ -157,14 +119,8 @@ class Fuzzer:
                     try:
                         r = self.s.get(url_final, stream=True,
                                        verify=False, timeout=10)
-                        if r.status_code <= 403:
-                            if r.status_code > 200:
-                                print(
-                                    f"{self.WARNING}<{r.status_code}>= {url_final}{self.RESET}")
-                            else:
-                                print(
-                                    f"{self.OK}<{r.status_code}>= {url_final}{self.RESET}")
-                            listResponse.append(url_final)
+                        if r.status_code < 400:
+                            return f"{self.OK}{url_final}{self.RESET}"
                         continue
                     except:
                         pass
@@ -176,14 +132,8 @@ class Fuzzer:
                     try:
                         r = self.s.get(url_final, stream=True,
                                        verify=False, timeout=10)
-                        if r.status_code <= 403:
-                            if r.status_code == 200:
-                                print(
-                                    f"{self.OK}Found:{self.RESET} {url_final} CODE:{self.OK}<{r.status_code}>{self.RESET}")
-                            else:
-                                print(
-                                    f"{self.OK}Found:{self.RESET} {url_final} CODE:{self.WARNING}<{r.status_code}>{self.RESET}")
-                            self.save_in_output(url_final)
+                        if r.status_code <400:
+                            return f"{self.OK}Found[*]:{self.RESET} {url_final}{self.RESET}"
                         continue
                     except:
                         pass
@@ -192,26 +142,25 @@ class Fuzzer:
                     try:
                         r = self.s.get(url_final, stream=True,
                                        verify=False, timeout=10)
-                        if r.status_code <= 403:
-                            if r.status_code == 200:
-                                print(
-                                    f"{self.OK}Found:{self.RESET} {url_final} CODE:{self.OK}<{r.status_code}>{self.RESET}")
-                            else:
-                                print(
-                                    f"{self.OK}Found:{self.RESET} {url_final} CODE:{self.WARNING}<{r.status_code}>{self.RESET}")
-                            self.save_in_output(url_final)
+                        if r.status_code < 400:
+                            return f"{self.OK}Found[*]:{self.RESET} {url_final}{self.RESET}"
                         continue
                     except:
                         pass
-        return listResponse
 
     # TODO Método que faz o fuzzing sem extensões
 
     def fuzz_target(self, wordlist):
         try:
-            pool = tp(args.threads)
-            resultado = pool.map(self.work, wordlist)
-            self.save_in_output(resultado)
+            with tp(processes=args.threads) as p:
+                max_ = len(wordlist)
+                with tqdm(total=max_,ascii=True,colour="green") as pbar:
+                    for r in p.imap_unordered(self.work, wordlist):
+                        if r != None:
+                            tqdm.write("")
+                            tqdm.write(f"{r}")
+                            self.save_in_output(r)
+                        pbar.update()
         except KeyboardInterrupt:
             print("\nParando a execução")
         finally:
@@ -229,11 +178,24 @@ class Fuzzer:
 
     def fuzz_extension_on_target(self, wordlist):
         try:
-            pool = tp(args.threads)
-            resultado = pool.map(self.work_ext, wordlist)
-            resultado2 = pool.map(self.work, wordlist)
-            save_list = self.save_line(resultado, resultado2)
-            self.save_in_output(save_list)
+            with tp(processes=args.threads) as p:
+                max_ = len(wordlist)
+                with tqdm(total=max_,ascii=True,colour='green') as pbar:
+                    for r in p.imap_unordered(self.work_ext, wordlist):
+                        if r != None:
+                            tqdm.write("")
+                            tqdm.write(f"{r}")
+                            self.save_in_output(r)
+                        pbar.update()
+            with tp(processes=args.threads) as p:
+                max_ = len(wordlist)
+                with tqdm(total=max_,ascii=True,colour='green') as pbar:
+                    for r in p.imap_unordered(self.work, wordlist):
+                        if r != None:
+                            tqdm.write("")
+                            tqdm.write(f"{r}")
+                            self.save_in_output(r)
+                        pbar.update()
         except KeyboardInterrupt:
             print("\nParando a execução")
         finally:
