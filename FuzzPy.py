@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# -*- utf-8 -*-
+#codding: utf-8
 
 import argparse
 import requests
@@ -46,11 +46,6 @@ class Fuzzer:
         else:
             print('Extensões: None')
         print('-'*50)
-        if args.simple == 's':
-            print("Modo: simples")
-        else:
-            print("Modo: normal")
-        print('-'*50)
         if self.args.wordlist:
             print(f"Wordlist: {args.wordlist}")
         else:
@@ -63,104 +58,72 @@ class Fuzzer:
         print("-"*50)
 
     # TODO Método que vrifica se o parâmetro (-o) está ativo e usa o caminho para criar o arquivo de saída e as salva nele
-    def save_in_output(self, found):
+    def save_in_output(self, founds):
         if self.args.output:
             with open(args.output, 'w+') as file:
-                if found == None:
-                    pass
-                else:
-                    file.write(found)
-                    file.write('\n')
+                for i in founds:
+                    if founds == None:
+                        pass
+                    else:
+                        file.write(i)
+                        file.write('\n')
 
-    
     # TODO Método que monta e realiza as requisições sem as extensões ao alvo
 
     def work(self, word):
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         url_final = f'{args.target}{word}'
-        if args.simple == 's':
-            try:
-                r = self.s.get(url_final, stream=True,
-                               verify=False, timeout=10)
-                if r.status_code < 400:
-                    return f"{self.OK}{url_final}{self.RESET}"
-            except:
-                pass
+        try:
+            r = self.s.get(url_final, stream=True,
+                           verify=False, timeout=10)
+            if r.status_code < 400:
+                return url_final
+        except:
+            pass
 
-        else:
-            try:
-                r = self.s.get(url_final, stream=True,
-                               verify=False, timeout=10)
-                if r.status_code < 400:
-                    return f"{self.OK}Found[*]:{self.RESET} {url_final}{self.RESET}"
-            except:
-                pass
     # TODO Método que monta e realiza as requisições com as extensões ao alvo
 
     def work_ext(self, word):
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         extensoes = args.extensions
         extensoes = extensoes.split(',')
-        if args.simple == 's':
-            for ext in extensoes:
-                if '.' not in ext:
-                    ext = '.'+ext
-                    url_final = f'{args.target}{word}{ext}'
-                    try:
-                        r = self.s.get(url_final, stream=True,
-                                       verify=False, timeout=10)
-                        if r.status_code < 400:
-                            return f"{self.OK}{url_final}{self.RESET}"
-                        continue
-                    except:
-                        pass
-                else:
-                    url_final = f'{args.target}{word}{ext}'
-                    try:
-                        r = self.s.get(url_final, stream=True,
-                                       verify=False, timeout=10)
-                        if r.status_code < 400:
-                            return f"{self.OK}{url_final}{self.RESET}"
-                        continue
-                    except:
-                        pass
-        else:
-            for ext in extensoes:
-                if '.' not in ext:
-                    ext = '.'+ext
-                    url_final = f'{args.target}{word}{ext}'
-                    try:
-                        r = self.s.get(url_final, stream=True,
-                                       verify=False, timeout=10)
-                        if r.status_code <400:
-                            return f"{self.OK}Found[*]:{self.RESET} {url_final}{self.RESET}"
-                        continue
-                    except:
-                        pass
-                else:
-                    url_final = f'{args.target}{word}{ext}'
-                    try:
-                        r = self.s.get(url_final, stream=True,
-                                       verify=False, timeout=10)
-                        if r.status_code < 400:
-                            return f"{self.OK}Found[*]:{self.RESET} {url_final}{self.RESET}"
-                        continue
-                    except:
-                        pass
-
+        for ext in extensoes:
+            if '.' not in ext:
+                ext = '.'+ext
+                url_final = f'{args.target}{word}{ext}'
+                try:
+                    r = self.s.get(url_final, stream=True,
+                                   verify=False, timeout=10)
+                    if r.status_code < 400:
+                        return f"{self.OK}{url_final}{self.RESET}"
+                    continue
+                except:
+                    pass
+            else:
+                url_final = f'{args.target}{word}{ext}'
+                try:
+                    r = self.s.get(url_final, stream=True,
+                                   verify=False, timeout=10)
+                    if r.status_code < 400:
+                        return url_final
+                    continue
+                except:
+                    pass
     # TODO Método que faz o fuzzing sem extensões
 
     def fuzz_target(self, wordlist):
+        list_save = []
         try:
             with tp(processes=args.threads) as p:
                 max_ = len(wordlist)
-                with tqdm(total=max_,ascii=True,colour="green") as pbar:
+                with tqdm(total=max_, ascii=True, colour="blue") as pbar:
                     for r in p.imap_unordered(self.work, wordlist):
                         if r != None:
                             tqdm.write("")
-                            tqdm.write(f"{r}")
-                            self.save_in_output(r)
+                            tqdm.write(f"{self.OK}Found[*]:{self.RESET} {r}")
+                            list_save.append(r)
                         pbar.update()
+            self.save_in_output(list_save)
         except KeyboardInterrupt:
             print("\nParando a execução")
         finally:
@@ -177,25 +140,24 @@ class Fuzzer:
     # TODO Método que faz o fuzzing com extensões
 
     def fuzz_extension_on_target(self, wordlist):
+        list_save = []
         try:
             with tp(processes=args.threads) as p:
-                max_ = len(wordlist)
-                with tqdm(total=max_,ascii=True,colour='green') as pbar:
+                max_ = len(wordlist)*2
+                with tqdm(total=max_, ascii=True, colour='blue') as pbar:
                     for r in p.imap_unordered(self.work_ext, wordlist):
                         if r != None:
                             tqdm.write("")
-                            tqdm.write(f"{r}")
-                            self.save_in_output(r)
+                            tqdm.write(f"{self.OK}Found[*]:{self.RESET} {r}")
+                            list_save.append(r)
                         pbar.update()
-            with tp(processes=args.threads) as p:
-                max_ = len(wordlist)
-                with tqdm(total=max_,ascii=True,colour='green') as pbar:
                     for r in p.imap_unordered(self.work, wordlist):
                         if r != None:
                             tqdm.write("")
-                            tqdm.write(f"{r}")
-                            self.save_in_output(r)
+                            tqdm.write(f"{self.OK}Found[*]:{self.RESET} {r}")
+                            list_save.append(r)
                         pbar.update()
+            self.save_in_output(list_save)
         except KeyboardInterrupt:
             print("\nParando a execução")
         finally:
@@ -227,13 +189,11 @@ class Fuzzer:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description="FuzzPY\n by:Lucas dSilva")
-    parser.add_argument('-t', '--target', type=str, help='A url do alvo')
+    parser.add_argument('-t', '--target', type=str, help='A url do alvo',required=True)
     parser.add_argument('-w', '--wordlist', type=str,
                         help='O caminho da wordlist escolhida')
     parser.add_argument('-e', '--extensions', type=str,
                         help='As extensões que desja testar')
-    parser.add_argument('-s', '--simple', default='n',
-                        type=str, help='Ativa ou desativa o simple mode s=para ativar\n n=desativa(Padrão)')
     parser.add_argument('-b', '--banner', default='s', type=str,
                         help="Ativa o desativa o cabeçalho do programa:\n s=Para ativar(Padrão)\nn=para desativar")
     parser.add_argument('-o', '--output', type=str,
