@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 #codding: utf-8
+#Author:Lucas dSilva
+#Version:1.6.1
 
 import argparse
 import requests
@@ -16,6 +18,7 @@ class Fuzzer:
         global lista
         self.args = args
         self.tempo_inicial = time.time()
+        self.version="1.6.1"
         self.OK = '\033[92m'  # GREEN
         self.RESET = '\033[0m'  # RESET COLOR
         self.WARNING = '\033[93m'  # YELLOW
@@ -34,7 +37,8 @@ class Fuzzer:
     # TODO Método que trata e imprime o banner
     def banner(self, list):
         banner = rb.random_banner()
-        print(banner)
+        print(f'''{banner}
+                         Version:{self.version}''')
         time.sleep(2)
         print('-'*50)
         print('Autor: Lucas dSilva')
@@ -87,6 +91,15 @@ class Fuzzer:
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         extensoes = args.extensions
         extensoes = extensoes.split(',')
+        url_final = f'{args.target}{word}'
+        url2 = None
+        try:
+            r = self.s.get(url_final, stream=True,
+                           verify=False, timeout=10)
+            if r.status_code < 400:
+                url2=url_final
+        except:
+            pass
         for ext in extensoes:
             if '.' not in ext:
                 ext = '.'+ext
@@ -95,7 +108,7 @@ class Fuzzer:
                     r = self.s.get(url_final, stream=True,
                                    verify=False, timeout=10)
                     if r.status_code < 400:
-                        return f"{self.OK}{url_final}{self.RESET}"
+                        return url_final
                     continue
                 except:
                     pass
@@ -109,6 +122,7 @@ class Fuzzer:
                     continue
                 except:
                     pass
+        return url2
     # TODO Método que faz o fuzzing sem extensões
 
     def fuzz_target(self, wordlist):
@@ -143,15 +157,9 @@ class Fuzzer:
         list_save = []
         try:
             with tp(processes=args.threads) as p:
-                max_ = len(wordlist)*2
+                max_ = len(wordlist)
                 with tqdm(total=max_, ascii=True, colour='blue') as pbar:
                     for r in p.imap_unordered(self.work_ext, wordlist):
-                        if r != None:
-                            tqdm.write("")
-                            tqdm.write(f"{self.OK}Found[*]:{self.RESET} {r}")
-                            list_save.append(r)
-                        pbar.update()
-                    for r in p.imap_unordered(self.work, wordlist):
                         if r != None:
                             tqdm.write("")
                             tqdm.write(f"{self.OK}Found[*]:{self.RESET} {r}")
@@ -189,8 +197,8 @@ class Fuzzer:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description="FuzzPY\n by:Lucas dSilva")
-    parser.add_argument('-t', '--target', type=str, help='A url do alvo',required=True)
-    parser.add_argument('-w', '--wordlist', type=str,
+    parser.add_argument('-T', '--target', type=str, help='A url do alvo',required=True)
+    parser.add_argument('-W', '--wordlist', type=str,
                         help='O caminho da wordlist escolhida')
     parser.add_argument('-e', '--extensions', type=str,
                         help='As extensões que desja testar')
